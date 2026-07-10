@@ -1,0 +1,6 @@
+{
+  "name": "sam-ai-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sam AI - a simple web chatbot backed by OpenRouter"
+}

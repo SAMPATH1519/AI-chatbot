@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sam AI</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#1c2430;
+    --paper:#f7f5f1;
+    --panel:#ffffff;
+    --accent:#3c6e5e;
+    --accent-dark:#2a4d41;
+    --muted:#8a8f98;
+    --bot-bubble:#eef1ee;
+    --user-bubble:#3c6e5e;
+    --sidebar:#f1efe9;
+    --radius:16px;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Inter',sans-serif;
+    background:var(--paper);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--ink);
+    padding:24px;
+  }
+
+  #app{
+    width:680px;
+    max-width:100%;
+    height:640px;
+    max-height:calc(100vh - 48px);
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:0 20px 60px rgba(28,36,48,0.18);
+    display:flex;
+    overflow:hidden;
+  }
+
+  #sidebar{
+    width:220px;
+    flex-shrink:0;
+    background:var(--sidebar);
+    display:flex;
+    flex-direction:column;
+    border-right:1px solid #e6e2d8;
+  }
+  #new-chat-btn{
+    margin:14px;
+    padding:10px 12px;
+    border-radius:10px;
+    border:1px solid #d8d3c6;
+    background:#fff;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:13px;
+    font-weight:600;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    cursor:pointer;
+  }
+  #new-chat-btn:hover{ background:#faf9f6; border-color:var(--accent); }
+  #new-chat-btn svg{ width:14px; height:14px; }
+
+  #chat-list{
+    flex:1;
+    overflow-y:auto;
+    padding:0 8px;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .chat-item{
+    padding:9px 10px;
+    border-radius:8px;
+    font-size:12.5px;
+    color:#4a5058;
+    cursor:pointer;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+  }
+  .chat-item:hover{ background:#e6e2d8; }
+  .chat-item.active{ background:#ffffff; color:var(--ink); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,0.06); }
+  .chat-item .del{ opacity:0; font-size:14px; color:var(--muted); flex-shrink:0; }
+  .chat-item:hover .del{ opacity:1; }
+  .chat-item .del:hover{ color:#c0463d; }
+
+  #main{ flex:1; display:flex; flex-direction:column; min-width:0; }
+
+  #chat-header{
+    background:var(--accent);
+    color:#fff;
+    padding:18px 20px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-shrink:0;
+  }
+  #chat-header .dot{ width:8px; height:8px; border-radius:50%; background:#a8e6c9; }
+  #chat-header .title{ font-family:'Fraunces',serif; font-weight:600; font-size:17px; }
+  #chat-header .sub{ font-size:11px; opacity:0.8; margin-top:1px; }
+
+  #chat-messages{
+    flex:1;
+    overflow-y:auto;
+    padding:18px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    background:var(--paper);
+  }
+  .msg{
+    max-width:80%;
+    padding:10px 13px;
+    border-radius:14px;
+    font-size:14px;
+    line-height:1.55;
+    white-space:pre-wrap;
+  }
+  .msg.bot{ background:var(--bot-bubble); color:var(--ink); align-self:flex-start; border-bottom-left-radius:4px; }
+  .msg.user{ background:var(--user-bubble); color:#fff; align-self:flex-end; border-bottom-right-radius:4px; }
+  .msg.error{ background:#fbeceb; color:#a13f37; }
+
+  #empty-state{ margin:auto; text-align:center; color:var(--muted); font-size:13px; padding:0 30px; }
+  #empty-state b{ color:var(--ink); display:block; font-family:'Fraunces',serif; font-size:16px; margin-bottom:6px;}
+
+  .typing{ align-self:flex-start; display:flex; gap:4px; padding:12px 14px; background:var(--bot-bubble); border-radius:14px; border-bottom-left-radius:4px; }
+  .typing span{ width:6px; height:6px; border-radius:50%; background:var(--muted); animation:blink 1.2s infinite ease-in-out; }
+  .typing span:nth-child(2){animation-delay:.2s;}
+  .typing span:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{ 0%,80%,100%{opacity:.25;} 40%{opacity:1;} }
+
+  #chat-input-row{
+    display:flex;
+    gap:8px;
+    padding:14px;
+    border-top:1px solid #eee;
+    background:var(--panel);
+    flex-shrink:0;
+  }
+  #chat-input{
+    flex:1;
+    border:1px solid #ddd;
+    border-radius:20px;
+    padding:11px 15px;
+    font-size:14px;
+    font-family:inherit;
+    outline:none;
+    resize:none;
+  }
+  #chat-input:focus{ border-color:var(--accent); }
+  #chat-send{
+    width:40px; height:40px;
+    border-radius:50%;
+    background:var(--accent);
+    border:none;
+    color:#fff;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+  }
+  #chat-send:hover:not(:disabled){ background:var(--accent-dark); }
+  #chat-send:disabled{ opacity:0.5; cursor:default; }
+  #chat-send svg{ width:16px; height:16px; }
+
+  @media (max-width:560px){
+    #sidebar{ width:150px; }
+    #app{ height:calc(100vh - 32px); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="sidebar">
+    <button id="new-chat-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      New chat
+    </button>
+    <div id="chat-list"></div>
+  </div>
+
+  <div id="main">
+    <div id="chat-header">
+      <span class="dot"></span>
+      <div>
+        <div class="title">Sam AI</div>
+        <div class="sub">Live on the web</div>
+      </div>
+    </div>
+    <div id="chat-messages">
+      <div id="empty-state">
+        <b>Start a conversation</b>
+        Ask anything. Your chats are saved on this device automatically.
+      </div>
+    </div>
+    <div id="chat-input-row">
+      <textarea id="chat-input" rows="1" placeholder="Message Sam AI..."></textarea>
+      <button id="chat-send" aria-label="Send">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const messagesEl = document.getElementById('chat-messages');
+  const inputEl = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+  const newChatBtn = document.getElementById('new-chat-btn');
+  const chatListEl = document.getElementById('chat-list');
+  const emptyState = document.getElementById('empty-state');
+
+  const CONV_INDEX_KEY = 'sam-ai-conversations';
+  const CONV_PREFIX = 'sam-ai-conv:';
+
+  let conversations = [];
+  let currentId = null;
+  let messages = [];
+
+  function newId(){ return 'c' + Date.now() + '-' + Math.random().toString(36).slice(2,7); }
+
+  function renderChatList(){
+    chatListEl.innerHTML = '';
+    conversations.forEach(c => {
+      const item = document.createElement('div');
+      item.className = 'chat-item' + (c.id === currentId ? ' active' : '');
+      const label = document.createElement('span');
+      label.textContent = c.title;
+      label.style.overflow = 'hidden';
+      label.style.textOverflow = 'ellipsis';
+      const del = document.createElement('span');
+      del.className = 'del';
+      del.textContent = '✕';
+      del.title = 'Delete chat';
+      del.addEventListener('click', (e) => { e.stopPropagation(); deleteConversation(c.id); });
+      item.appendChild(label);
+      item.appendChild(del);
+      item.addEventListener('click', () => switchConversation(c.id));
+      chatListEl.appendChild(item);
+    });
+  }
+
+  function renderMessages(){
+    messagesEl.innerHTML = '';
+    if (messages.length === 0){
+      messagesEl.appendChild(emptyState);
+      return;
+    }
+    messages.forEach(m => {
+      const div = document.createElement('div');
+      div.className = 'msg ' + (m.role === 'user' ? 'user' : (m.error ? 'bot error' : 'bot'));
+      div.textContent = m.content;
+      messagesEl.appendChild(div);
+    });
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function saveIndex(){ localStorage.setItem(CONV_INDEX_KEY, JSON.stringify(conversations)); }
+  function saveMessages(){ localStorage.setItem(CONV_PREFIX + currentId, JSON.stringify(messages)); }
+  function loadMessages(id){
+    const raw = localStorage.getItem(CONV_PREFIX + id);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  function switchConversation(id){
+    currentId = id;
+    messages = loadMessages(id);
+    renderMessages();
+    renderChatList();
+  }
+
+  function createConversation(){
+    const conv = { id: newId(), title: 'New chat' };
+    conversations.unshift(conv);
+    saveIndex();
+    currentId = conv.id;
+    messages = [];
+    renderMessages();
+    renderChatList();
+    inputEl.focus();
+  }
+
+  function deleteConversation(id){
+    conversations = conversations.filter(c => c.id !== id);
+    saveIndex();
+    localStorage.removeItem(CONV_PREFIX + id);
+    if (id === currentId){
+      if (conversations.length > 0) switchConversation(conversations[0].id);
+      else createConversation();
+    } else {
+      renderChatList();
+    }
+  }
+
+  function showTyping(){
+    const div = document.createElement('div');
+    div.className = 'typing';
+    div.id = 'typing-indicator';
+    div.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function hideTyping(){
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  // Calls OUR backend (/api/chat) instead of OpenRouter directly.
+  // The backend holds the real API key server-side.
+  async function getAIResponse(conversation){
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messages: conversation.map(m => ({ role: m.role, content: m.content })) })
+    });
+
+    const data = await response.json();
+    if (!response.ok){
+      throw new Error(data?.error || ('Request failed with status ' + response.status));
+    }
+    return data.reply;
+  }
+
+  async function handleSend(){
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    inputEl.value = '';
+    inputEl.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    const isFirstMessage = messages.length === 0;
+
+    messages.push({ role: 'user', content: text });
+    renderMessages();
+    saveMessages();
+
+    if (isFirstMessage){
+      const conv = conversations.find(c => c.id === currentId);
+      if (conv){
+        conv.title = text.length > 28 ? text.slice(0,28) + '…' : text;
+        saveIndex();
+        renderChatList();
+      }
+    }
+
+    showTyping();
+    try{
+      const reply = await getAIResponse(messages);
+      hideTyping();
+      messages.push({ role: 'assistant', content: reply });
+      renderMessages();
+      saveMessages();
+    }catch(e){
+      hideTyping();
+      messages.push({ role: 'assistant', content: "Couldn't reach the AI: " + e.message, error: true });
+      renderMessages();
+      saveMessages();
+    }finally{
+      sendBtn.disabled = false;
+    }
+  }
+
+  sendBtn.addEventListener('click', handleSend);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); handleSend(); }
+  });
+  inputEl.addEventListener('input', () => {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 100) + 'px';
+  });
+
+  newChatBtn.addEventListener('click', createConversation);
+
+  function init(){
+    const raw = localStorage.getItem(CONV_INDEX_KEY);
+    conversations = raw ? JSON.parse(raw) : [];
+    if (conversations.length === 0) createConversation();
+    else switchConversation(conversations[0].id);
+  }
+
+  init();
+</script>
+
+</body>
+</html>
